@@ -8,7 +8,7 @@ The repository is one Go module at the root and one TypeScript package under `we
 
 - `keyenc.go`, `doc.go` — the Go implementation and the package documentation. `doc.go` holds the reasoning about the grammar; keep it there rather than duplicating it in the README.
 - `web/src/keyenc.ts` — the TypeScript twin.
-- `web/src/sha256.ts` — a synchronous SHA-256, needed because `crypto.subtle.digest` is async and every call site is a synchronous render, dedupe or map-key path.
+- `web/src/sha256.ts` — a synchronous SHA-256, needed because `crypto.subtle.digest` is async and every call site is a synchronous render, dedupe or map-key path. `hex()` is non-consuming, matching Go's `hash.Hash.Sum` contract: it folds the padding into a snapshot, so it is idempotent and the stream stays usable afterwards.
 - `conformance/keys.json` — the shared golden fixture that pins the two implementations against each other.
 - `web/go.mod` — a sentinel module, not a real one. It stops the root module's `./...` walk at the `web/` boundary so `go test ./...` never descends into `web/node_modules`, which vendors Go files inside npm packages.
 

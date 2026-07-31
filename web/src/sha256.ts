@@ -62,10 +62,27 @@ export class Sha256 {
     return this;
   }
 
+  /**
+   * The digest of everything fed so far, as lowercase hex.
+   *
+   * Non-consuming: the padding is folded into a snapshot, so calling this twice
+   * returns the same value and the stream stays usable afterwards. That is Go's
+   * `hash.Hash.Sum` contract ("it does not change the underlying state"), and
+   * matching it matters here because this class exists to mirror Go's digest
+   * byte-for-byte — an API that diverged on reuse semantics would be a second,
+   * quieter way for the two implementations to disagree.
+   */
   hex(): string {
+    // Snapshot every mutable field the padding touches. #w is scratch, rebuilt
+    // per block, so it is deliberately not saved.
+    const h = this.#h.slice();
+    const buf = this.#buf.slice();
+    const buflen = this.#buflen;
+    const total = this.#total;
+
     // Pad: 0x80, zeroes, then the 64-bit big-endian bit length.
-    const bitLen = this.#total * 8;
-    const padLen = this.#buflen < 56 ? 56 - this.#buflen : 120 - this.#buflen;
+    const bitLen = total * 8;
+    const padLen = buflen < 56 ? 56 - buflen : 120 - buflen;
     const tail = new Uint8Array(padLen + 8);
     tail[0] = 0x80;
     // Bit lengths beyond 2^53 are unreachable for an in-memory string, so a
@@ -79,6 +96,13 @@ export class Sha256 {
     for (let i = 0; i < 8; i++) {
       out += this.#h[i]!.toString(16).padStart(8, "0");
     }
+
+    // Restore. Nothing above can throw (the block function is pure integer
+    // arithmetic over fixed-size arrays), so a plain restore is sufficient.
+    this.#h = h;
+    this.#buf = buf;
+    this.#buflen = buflen;
+    this.#total = total;
     return out;
   }
 
