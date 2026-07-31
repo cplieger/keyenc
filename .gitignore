@@ -1,0 +1,30 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# Kiro skill artifacts (code-review, refactor, steering-maintenance, judgement)
+**/.code-review/
+**/.judgement/
+**/.refactor/
+**/.steering-maintenance/
+
+# TypeScript half
+web/node_modules/
+web/coverage/
+web/.stryker-tmp/
+
+# Local tool caches (never committed)
+.gocache/

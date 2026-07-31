@@ -1,0 +1,41 @@
+{
+  "name": "@cplieger/keyenc",
+  "version": "1.0.0",
+  "description": "Injective composite-key encoding: join untrusted fields into one unforgeable key",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cplieger/keyenc.git",
+    "directory": "web"
+  },
+  "homepage": "https://github.com/cplieger/keyenc",
+  "exports": {
+    ".": "./src/keyenc.ts"
+  },
+  "files": [
+    "src/",
+    "!src/**/*.test.ts",
+    "jsr.json"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "typecheck:tests": "tsc -p tsconfig.tests.json",
+    "test": "vitest --run"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/typescript-checker": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
+    "@types/node": "24.13.3",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "10.7.0",
+    "fast-check": "4.9.0",
+    "prettier": "3.9.6",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10"
+  }
+}

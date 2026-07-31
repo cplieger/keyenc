@@ -1,0 +1,11 @@
+{
+  "name": "@cplieger/keyenc",
+  "version": "1.0.0",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    ".": "./src/keyenc.ts"
+  },
+  "publish": {
+    "include": ["src/keyenc.ts", "src/sha256.ts", "README.md", "LICENSE", "jsr.json"]
+  }
+}
