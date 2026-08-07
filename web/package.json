@@ -10,6 +10,20 @@
     "directory": "web"
   },
   "homepage": "https://github.com/cplieger/keyenc",
+  "bugs": {
+    "url": "https://github.com/cplieger/keyenc/issues"
+  },
+  "author": "cplieger <917744+cplieger@users.noreply.github.com>",
+  "keywords": [
+    "composite-key",
+    "key-encoding",
+    "escaping",
+    "injection",
+    "cache-key",
+    "dedupe",
+    "sha256",
+    "typescript"
+  ],
   "exports": {
     ".": "./src/keyenc.ts"
   },
