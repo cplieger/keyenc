@@ -2,7 +2,7 @@
   "name": "@cplieger/keyenc",
   "version": "1.0.0",
   "description": "Injective composite-key encoding: join untrusted fields into one unforgeable key",
-  "license": "GPL-3.0-or-later",
+  "license": "Apache-2.0",
   "type": "module",
   "repository": {
     "type": "git",
