@@ -46,7 +46,6 @@ export default [
           allowDefaultProject: [
             "*.test.ts",
             "*.property.test.ts",
-            "fc-strict-setup.ts",
             "eslint.config.mjs",
             "eslint.config.base.mjs",
           ],
@@ -185,7 +184,6 @@ export default [
       "**/*.test.ts",
       "**/*.fuzz.test.ts",
       "**/*.property.test.ts",
-      "fc-strict-setup.ts",
       "test-stubs/**",
     ],
     ...tseslint.configs.disableTypeChecked,
