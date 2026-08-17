@@ -6,6 +6,7 @@
     ".": "./src/keyenc.ts"
   },
   "publish": {
-    "include": ["src/keyenc.ts", "src/sha256.ts", "README.md", "LICENSE", "jsr.json"]
+    "include": ["LICENSE", "README.md", "src/**/*.ts", "jsr.json"],
+    "exclude": ["src/**/*.test.ts"]
   }
 }
