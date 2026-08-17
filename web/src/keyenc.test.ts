@@ -20,6 +20,13 @@ interface ConformanceCase {
   key: string;
 }
 
+// The fixture is a REPO-ROOT sibling of web/, which is why stryker.config.json
+// sets `inPlace: true`. Stryker otherwise copies web/ into
+// .stryker-tmp/sandbox-*/ where this path does not resolve, and the throw lands
+// at module load — so the whole file contributes zero tests SILENTLY and Stryker
+// scores what is left (4 of 49 tests, 42% instead of 86%). Read it from
+// anywhere outside web/ and that config option is load-bearing; do not relocate
+// or duplicate the fixture to avoid it, both halves share it on purpose.
 const fixture = JSON.parse(
   readFileSync(pathJoin(import.meta.dirname, "../../conformance/keys.json"), "utf8"),
 ) as { note: string; cases: ConformanceCase[] };

@@ -8,6 +8,7 @@
   "typescriptChecker": {
     "prioritizePerformanceOverAccuracy": false
   },
+  "inPlace": true,
   "mutate": ["src/**/*.ts", "!src/**/*.test.ts"],
   "mutator": {
     "excludedMutations": ["StringLiteral"]
