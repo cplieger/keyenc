@@ -49,7 +49,7 @@ const key = join("streams", userID, ratingKey, audioID, subID);
 
 ### Reading one back
 
-Some keys are parsed again — a URL path segment, a value read out of a persisted file. `Split` is `Join`'s exact inverse, so the site needs one grammar rather than an encoder plus a parser that can disagree with it.
+Some keys are parsed again: a URL path segment, a value read out of a persisted file. `Split` is `Join`'s exact inverse, so the site needs one grammar rather than an encoder plus a parser that can disagree with it.
 
 ```go
 parts, err := keyenc.Split(key)
