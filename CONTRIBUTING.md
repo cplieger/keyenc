@@ -6,11 +6,11 @@ Thanks for your interest. `keyenc` is one grammar with two implementations that 
 
 The repository is one Go module at the root and one TypeScript package under `web/`:
 
-- `keyenc.go`, `doc.go` — the Go implementation and the package documentation. `doc.go` holds the reasoning about the grammar; keep it there rather than duplicating it in the README.
-- `web/src/keyenc.ts` — the TypeScript twin.
-- `web/src/sha256.ts` — a synchronous SHA-256, needed because `crypto.subtle.digest` is async and every call site is a synchronous render, dedupe or map-key path. `hex()` is non-consuming, matching Go's `hash.Hash.Sum` contract: it folds the padding into a snapshot, so it is idempotent and the stream stays usable afterwards.
-- `conformance/keys.json` — the shared golden fixture that pins the two implementations against each other.
-- `web/go.mod` — a sentinel module, not a real one. It stops the root module's `./...` walk at the `web/` boundary so `go test ./...` never descends into `web/node_modules`, which vendors Go files inside npm packages.
+- `keyenc.go`, `doc.go`: the Go implementation and the package documentation. `doc.go` holds the reasoning about the grammar; keep it there rather than duplicating it in the README.
+- `web/src/keyenc.ts`: the TypeScript twin.
+- `web/src/sha256.ts`: a synchronous SHA-256, needed because `crypto.subtle.digest` is async and every call site is a synchronous render, dedupe or map-key path. `hex()` is non-consuming, matching Go's `hash.Hash.Sum` contract: it folds the padding into a snapshot, so it is idempotent and the stream stays usable afterwards.
+- `conformance/keys.json`: the shared golden fixture that pins the two implementations against each other.
+- `web/go.mod`: a sentinel module, not a real one. It stops the root module's `./...` walk at the `web/` boundary so `go test ./...` never descends into `web/node_modules`, which vendors Go files inside npm packages.
 
 ### The grammar is a contract, not an implementation detail
 
@@ -46,7 +46,7 @@ The README's "Unsupported by Design" section is the full list, and each entry is
 
 ## Local development
 
-`GOTOOLCHAIN=auto` is required — the module's `go` directive is ahead of some local toolchains.
+`GOTOOLCHAIN=auto` is required: the module's `go` directive is ahead of some local toolchains.
 
 ```sh
 # Go half
