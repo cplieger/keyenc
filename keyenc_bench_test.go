@@ -3,6 +3,7 @@ package keyenc
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -359,6 +360,48 @@ func TestSplitAllocationCountTracksWhatItRecovers(t *testing.T) {
 	}
 	t.Logf("recovering %d components of %d bytes costs %v allocations from a %d-byte key and %v from the %d-byte escaped key",
 		components, perPart, counts[0], len(keys[0].key), counts[1], len(keys[1].key))
+
+	// BYTES are the axis that carried the defect, and the count above could not
+	// see it. Split used to size its result slice with strings.Count over the
+	// whole key, which counts an escaped `\:` as a boundary, so an
+	// escape-dense key reserved one slot per escaped separator while recovering
+	// four components: 22496 B/op against 4128 for the verbatim key, 5.4x, with
+	// the allocation count identical at 29 either way. The separators are bytes
+	// the caller's data controls, so that was attacker-influenced memory
+	// amplification with no signal in any metric the weekly tracker charts.
+	//
+	// Both keys now recover the same four components for the same bytes, and
+	// this is what holds it: a hint that counts escaped separators again shows
+	// up here as a multiple, whatever the count does.
+	byteCounts := make([]uint64, len(keys))
+	for i, k := range keys {
+		byteCounts[i] = allocBytesPerRun(50, func() {
+			_, _ = Split(k.key)
+		})
+	}
+	if byteCounts[1] > byteCounts[0]+byteCounts[0]/4 {
+		t.Errorf("Split allocated %d bytes per run on the %s key and %d on the %s key, want the second within 25%% of the first: both recover %d components of %d bytes, so a wider gap means the result slice is sized from escaped separators rather than from real boundaries",
+			byteCounts[0], keys[0].name, byteCounts[1], keys[1].name, components, perPart)
+	}
+	t.Logf("recovering them costs %d bytes from the verbatim key and %d from the escaped key",
+		byteCounts[0], byteCounts[1])
+}
+
+// allocBytesPerRun is the bytes twin of [testing.AllocsPerRun]. It exists
+// because a capacity-hint defect moves BYTES while leaving the allocation count
+// untouched, so a contract written only on the count cannot see the whole class.
+// Same shape as AllocsPerRun: run once to settle any lazy initialisation, then
+// measure the delta over n runs with the GC held still.
+func allocBytesPerRun(n int, f func()) uint64 {
+	f()
+	runtime.GC()
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	for range n {
+		f()
+	}
+	runtime.ReadMemStats(&after)
+	return (after.TotalAlloc - before.TotalAlloc) / uint64(n)
 }
 
 // BenchmarkJoinComponentCount varies how many components are joined at a fixed
