@@ -139,6 +139,46 @@ describe("join", () => {
   });
 });
 
+describe("the size bound counts UTF-8 bytes per length class", () => {
+  // The bound is measured in UTF-8 bytes because the Go half measures len(s),
+  // so the raw/hashed decision has to cross at the same input in both halves.
+  // Each case below pins ONE of the four UTF-8 length classes at the exact
+  // crossing point: a counter charging the wrong width for a single class moves
+  // the threshold for that class alone, which the conformance fixture would
+  // catch only if it happened to carry a case of that width at that size.
+
+  it("charges one byte for the top of the 1-byte range", () => {
+    // U+007F is the last code point UTF-8 spells in one byte. Charging it two
+    // would hash a set that Go still encodes raw.
+    expect(isHashed(join("\u007f".repeat(MAX_COMPONENT_BYTES)))).toBe(false);
+    expect(isHashed(join("\u007f".repeat(MAX_COMPONENT_BYTES + 1)))).toBe(true);
+  });
+
+  it("charges two bytes for the top of the 2-byte range", () => {
+    // U+07FF is the last 2-byte code point, so it is where a `<` written for a
+    // `<=` shows up: charging it three bytes crosses the bound 1366 characters
+    // early.
+    expect(isHashed(join("\u07ff".repeat(MAX_COMPONENT_BYTES / 2)))).toBe(false);
+    expect(isHashed(join("\u07ff".repeat(MAX_COMPONENT_BYTES / 2 + 1)))).toBe(true);
+  });
+
+  it("charges three bytes for a 3-byte code point", () => {
+    // U+3042 is 3 bytes. 2730 of them are 8190 bytes, just inside the 8192-byte
+    // bound; 2731 are 8193, just outside. Charging two bytes (or none) keeps the
+    // second one raw while Go hashes it.
+    expect(isHashed(join("あ".repeat(2730)))).toBe(false);
+    expect(isHashed(join("あ".repeat(2731)))).toBe(true);
+  });
+
+  it("charges four bytes for an astral code point", () => {
+    // U+1F511 arrives from the code-point iterator as one two-unit string. Read
+    // as a lone surrogate instead it would be charged three bytes, the width
+    // TextEncoder uses for the replacement character.
+    expect(isHashed(join("🔑".repeat(MAX_COMPONENT_BYTES / 4)))).toBe(false);
+    expect(isHashed(join("🔑".repeat(MAX_COMPONENT_BYTES / 4 + 1)))).toBe(true);
+  });
+});
+
 describe("split", () => {
   it("refuses a hashed identity", () => {
     expect(() => split(join("x".repeat(MAX_COMPONENT_BYTES + 1)))).toThrow(HashedKeyError);
@@ -156,6 +196,44 @@ describe("split", () => {
 
   it("splits the empty key to no components", () => {
     expect(split("")).toEqual([]);
+  });
+});
+
+describe("isHashed", () => {
+  // isHashed is what a caller consults before split, so its answer decides
+  // whether a key is treated as parseable data or as an opaque identity. Every
+  // rejection below is one character away from the accepted form, because the
+  // interesting inputs are not random strings but near-misses: a raw key that
+  // happens to look digest-shaped, and a forged key built to be accepted.
+
+  it("accepts the prefix followed by 64 hex characters", () => {
+    expect(isHashed("sha256:" + "a".repeat(64))).toBe(true);
+  });
+
+  it("requires the hashed prefix rather than a digest-shaped tail", () => {
+    // An ordinary two-component key whose first component is six characters
+    // long puts 64 hex characters exactly where the digest sits. Classifying by
+    // shape rather than by prefix would call this raw key hashed, and its
+    // caller would skip the split that recovers ["abcdef", "aaa…"].
+    expect(isHashed(join("abcdef", "a".repeat(64)))).toBe(false);
+    expect(isHashed("sha256_" + "a".repeat(64))).toBe(false);
+  });
+
+  it("requires exactly 64 digest characters", () => {
+    expect(isHashed("sha256:" + "a".repeat(63))).toBe(false);
+    expect(isHashed("sha256:" + "a".repeat(65))).toBe(false);
+  });
+
+  it("requires every digest character to be hex", () => {
+    expect(isHashed("sha256:" + "z".repeat(64))).toBe(false);
+  });
+
+  it("anchors the digest match at both ends", () => {
+    // Unanchored, a non-hex character at either end still leaves a 63-character
+    // hex run for the match to find, so a key of the right length carrying a
+    // forged prefix or suffix would pass as a hashed identity.
+    expect(isHashed("sha256:z" + "a".repeat(63))).toBe(false);
+    expect(isHashed("sha256:" + "a".repeat(63) + "z")).toBe(false);
   });
 });
 
