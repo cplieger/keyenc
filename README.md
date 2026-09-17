@@ -3,11 +3,8 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/cplieger/keyenc.svg)](https://pkg.go.dev/github.com/cplieger/keyenc)
 [![npm](https://img.shields.io/npm/v/@cplieger/keyenc)](https://www.npmjs.com/package/@cplieger/keyenc)
 [![JSR](https://jsr.io/badges/@cplieger/keyenc)](https://jsr.io/@cplieger/keyenc)
-[![Test coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/coverage.json)](https://github.com/cplieger/keyenc/actions/workflows/coverage.yml)
 [![Mutation](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation.json)](https://github.com/cplieger/keyenc/issues?q=label%3Agremlins-tracker)
 [![Mutation (TS)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation-ts.json)](https://github.com/cplieger/keyenc/issues?q=label%3Astryker-tracker)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13903/badge)](https://www.bestpractices.dev/projects/13903)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/cplieger/keyenc/badge)](https://scorecard.dev/viewer/?uri=github.com/cplieger/keyenc)
 
 > Join several untrusted strings into one key that no field's content can forge. Go and TypeScript, byte-identical.
 
