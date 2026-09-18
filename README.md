@@ -1,10 +1,6 @@
 # keyenc
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/cplieger/keyenc.svg)](https://pkg.go.dev/github.com/cplieger/keyenc)
-[![npm](https://img.shields.io/npm/v/@cplieger/keyenc)](https://www.npmjs.com/package/@cplieger/keyenc)
-[![JSR](https://jsr.io/badges/@cplieger/keyenc)](https://jsr.io/@cplieger/keyenc)
-[![Mutation](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation.json)](https://github.com/cplieger/keyenc/issues?q=label%3Agremlins-tracker)
-[![Mutation (TS)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation-ts.json)](https://github.com/cplieger/keyenc/issues?q=label%3Astryker-tracker)
+[![Go Reference](https://pkg.go.dev/badge/github.com/cplieger/keyenc.svg)](https://pkg.go.dev/github.com/cplieger/keyenc) [![npm](https://img.shields.io/npm/v/@cplieger/keyenc)](https://www.npmjs.com/package/@cplieger/keyenc) [![JSR](https://jsr.io/badges/@cplieger/keyenc)](https://jsr.io/@cplieger/keyenc) [![Mutation](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation.json)](https://github.com/cplieger/keyenc/issues?q=label%3Agremlins-tracker) [![Mutation (TS)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation-ts.json)](https://github.com/cplieger/keyenc/issues?q=label%3Astryker-tracker)
 
 > Join several untrusted strings into one key that no field's content can forge. Go and TypeScript, byte-identical.
 
