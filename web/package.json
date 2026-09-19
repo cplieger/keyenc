@@ -30,7 +30,9 @@
   "files": [
     "src/",
     "!src/**/*.test.ts",
-    "jsr.json"
+    "jsr.json",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
