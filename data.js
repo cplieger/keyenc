@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
   "lastUpdate": 1790731974696,
-  "repoUrl": "https://github.com/cplieger/ci",
+  "repoUrl": "https://github.com/cplieger/keyenc",
   "entries": {
     "Benchmark": [
       {
@@ -2163,10 +2163,10 @@ window.BENCHMARK_DATA = {
             "username": "web-flow",
             "email": "noreply@github.com"
           },
-          "id": "48d1c682390d6a54c634f3df4594be7c938087f9",
-          "message": "chore(deps): update cplieger/ci digest to 1cc06fd (#659)",
-          "timestamp": "2026-09-24T22:02:23Z",
-          "url": "https://github.com/cplieger/ci/commit/48d1c682390d6a54c634f3df4594be7c938087f9"
+          "id": "99d926003365be768f1548a3cf984ada6536d065",
+          "message": "chore(devdeps): update dependency @types/node to v24.19.0 (#190)",
+          "timestamp": "2026-09-28T23:06:22Z",
+          "url": "https://github.com/cplieger/keyenc/commit/99d926003365be768f1548a3cf984ada6536d065"
         },
         "date": 1790731974439,
         "tool": "customSmallerIsBetter",
