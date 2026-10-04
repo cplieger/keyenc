@@ -188,6 +188,17 @@ describe("split", () => {
     expect(() => split("a" + ESCAPE)).toThrow(MalformedKeyError);
   });
 
+  it("refuses an uppercase sha256 digest as malformed", () => {
+    // join hashes any set whose escaped join would start with the prefix, so an
+    // uppercase digest is in neither its hashed image (lowercase only) nor its
+    // raw image, and matches isHashed, which also rejects it.
+    expect(() => split("sha256:" + "A".repeat(64))).toThrow(MalformedKeyError);
+  });
+
+  it("refuses a wrong-length sha256 digest as malformed", () => {
+    expect(() => split("sha256:" + "a".repeat(63))).toThrow(MalformedKeyError);
+  });
+
   it("refuses an escape before an unreserved character", () => {
     // A lenient decoder would normalize this to "ab" and accept a key join can
     // never emit, so a tampered key would round-trip as if it were canonical.
@@ -226,6 +237,10 @@ describe("isHashed", () => {
 
   it("requires every digest character to be hex", () => {
     expect(isHashed("sha256:" + "z".repeat(64))).toBe(false);
+  });
+
+  it("rejects an uppercase hex digest", () => {
+    expect(isHashed("sha256:" + "A".repeat(64))).toBe(false);
   });
 
   it("anchors the digest match at both ends", () => {

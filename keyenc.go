@@ -49,8 +49,8 @@ var (
 
 	// ErrMalformed reports that a key was not produced by [Join]: it ends in a
 	// dangling escape, or an escape precedes a character that never needs
-	// escaping. Split's accepted language is exactly Join's image, so a
-	// tampered or hand-built key is refused rather than silently normalized -
+	// escaping. Split accepts no escape Join would not emit, so a tampered or
+	// hand-built key is refused rather than silently normalized -
 	// which matters wherever a key arrives from a persisted file, a URL
 	// segment or client storage.
 	ErrMalformed = errors.New("keyenc: key was not produced by Join")
@@ -103,25 +103,22 @@ func Join(parts ...string) string {
 	return hashParts(parts)
 }
 
-// Split recovers the exact components [Join] encoded. It is Join's inverse for
-// every in-bound key: Split(Join(parts...)) equals parts, and Join(Split(key))
-// equals key.
-//
-// Its accepted language is exactly Join's image. A key carrying an escape
-// before anything other than a reserved character, or a trailing dangling
-// escape, is refused with [ErrMalformed] rather than normalized, so "Split
-// accepted it" is a statement about the key's provenance. A hashed identity is
-// refused with [ErrHashed], whose components are not recoverable. The empty key
-// splits to no components, mirroring Join's zero-part case.
-//
-// Split exists so a site that parses its keys back has one grammar rather than
-// an encoder plus a separately-maintained parser that can disagree with it.
+// Split recovers the exact components [Join] encoded: Split(Join(parts...))
+// equals parts and Join(Split(key)) equals key for every in-bound key. It
+// checks no length, so an over-bound key Join would have hashed still splits.
+// A hashed identity is [ErrHashed]; any other "sha256:"-prefixed key is
+// [ErrMalformed], since Join emits no raw key with that prefix. An escape
+// before a non-reserved character, or a trailing dangling escape, is
+// [ErrMalformed] too. The empty key splits to no components.
 func Split(key string) ([]string, error) {
 	if key == "" {
 		return nil, nil
 	}
-	if strings.HasPrefix(key, hashedPrefix) {
-		return nil, ErrHashed
+	if rest, ok := strings.CutPrefix(key, hashedPrefix); ok {
+		if isHashedDigest(rest) {
+			return nil, ErrHashed
+		}
+		return nil, ErrMalformed
 	}
 	// The capacity hint counts UNESCAPED separators. A plain strings.Count would
 	// count an escaped `\:` too, which is a byte an attacker controls: a key
@@ -178,17 +175,28 @@ func unescapedSeparators(key string) int {
 	return n
 }
 
-// IsHashed reports whether key is a hashed identity, i.e. whether [Join]
-// reduced an oversized component set rather than encoding it. Call it before
-// [Split] at a site that must parse its keys back; a key is otherwise
-// indistinguishable from a raw one only to a caller that does not look.
+// IsHashed reports whether key is a hashed identity [Join] produced: the
+// "sha256:" prefix followed by 64 lowercase hex digits. Call it before [Split].
 func IsHashed(key string) bool {
 	rest, ok := strings.CutPrefix(key, hashedPrefix)
-	if !ok || len(rest) != hashedHexLen {
+	return ok && isHashedDigest(rest)
+}
+
+// isHashedDigest reports whether rest is a digest [hashParts] could have
+// emitted: exactly hashedHexLen lowercase hex characters. Join emits lowercase
+// hex, so an uppercase digest never came from Join. The byte scan keeps the
+// check allocation-free, which matters on the parse path [IsHashed] and [Split]
+// both run before every recovered key.
+func isHashedDigest(rest string) bool {
+	if len(rest) != hashedHexLen {
 		return false
 	}
-	_, err := hex.DecodeString(rest)
-	return err == nil
+	for i := range len(rest) {
+		if c := rest[i]; (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 // escapeJoin escapes each part before joining, so element boundaries survive

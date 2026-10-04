@@ -224,90 +224,63 @@ func TestJoinAllocationCountPerComponent(t *testing.T) {
 	})
 }
 
-// TestIsHashedAllocations measures the predicate a call site is told to run
-// before Split, on every key it parses back. It is not allocation-free, and the
-// split is exactly where the interesting half is: the two cheap checks decide
-// every raw key without allocating, and only a key that already looks like a
-// hashed identity reaches the hex decode that allocates.
-//
-// That asymmetry is the right way round for the documented call pattern - a
-// site guarding Split pays nothing on the keys it goes on to parse - so both
-// halves are pinned rather than only the flattering one.
+// TestIsHashedAllocations pins that IsHashed, the predicate a call site runs
+// before Split on every key it parses back, allocates nothing on any path. The
+// digest check is a byte scan rather than a decode, so a key that reaches it is
+// as cheap as one the prefix or length check rejects first - the parse path a
+// site guarding Split takes is free whatever the key.
 func TestIsHashedAllocations(t *testing.T) {
-	// A key that is not a hashed identity: the prefix check or the length check
-	// answers, and neither allocates.
-	t.Run("a raw key is rejected without allocating", func(t *testing.T) {
-		cases := map[string]string{
-			"no prefix":        "streams:u-42:1234:3:5",
-			"prefix only":      hashedPrefix,
-			"digest too short": hashedPrefix + strings.Repeat("0", hashedHexLen-1),
-			"digest too long":  hashedPrefix + strings.Repeat("0", hashedHexLen+1),
-		}
-		for name, key := range cases {
-			t.Run(name, func(t *testing.T) {
-				if IsHashed(key) {
-					t.Fatalf("IsHashed(%.16q, %d bytes) = true, want false; the case is meant to be rejected", key, len(key))
-				}
-				if got := testing.AllocsPerRun(100, func() {
-					_ = IsHashed(key)
-				}); got != 0 {
-					t.Errorf("IsHashed(%.16q, %d bytes) allocated %v times per run, want 0: the reject path is the one every parsed key takes",
-						key, len(key), got)
-				}
-			})
-		}
-	})
-
-	// A key that reaches the hex decode allocates exactly the 32-byte buffer
-	// that decode fills and IsHashed throws away. One allocation is the whole
-	// cost, and it is the same whether the digest is valid or not, so an
-	// attacker gains nothing by sending a key that fails late.
-	t.Run("reaching the digest costs one discarded buffer", func(t *testing.T) {
-		cases := map[string]string{
-			"valid digest":     Join(benchPlain(MaxComponentBytes + 1)),
-			"non-hex digest":   hashedPrefix + strings.Repeat("z", hashedHexLen),
-			"hex but last bad": hashedPrefix + strings.Repeat("0", hashedHexLen-1) + "z",
-		}
-		for name, key := range cases {
-			t.Run(name, func(t *testing.T) {
-				if got := testing.AllocsPerRun(100, func() {
-					_ = IsHashed(key)
-				}); got != 1 {
-					t.Errorf("IsHashed(%.16q, %d bytes) allocated %v times per run, want 1 (the discarded hex-decode buffer): a larger number means work was added to a predicate on a parse path; a smaller one means the buffer stopped escaping, which is an improvement worth tightening this contract to",
-						key, len(key), got)
-				}
-			})
-		}
-	})
-}
-
-// TestSplitRefusesAHashedKeyWithoutAllocating pins the refusal an attacker can
-// always reach: Split's guard is a prefix test, so any key beginning "sha256:"
-// is refused before a byte is scanned or allocated. That is consistent with
-// Join rather than lenient - Join routes an in-bound set whose escaped join
-// would start with that prefix through the hash instead, so no raw key can
-// begin with it - and it means refusal cost is O(len(prefix)) however long the
-// key is.
-//
-// The malformed refusal deliberately gets no such assertion: Split is one
-// forward pass, so a dangling escape at the end is only discovered after the
-// whole key has been decoded, and its cost is a function of where the
-// malformation sits. BenchmarkSplitRefusal charts both.
-func TestSplitRefusesAHashedKeyWithoutAllocating(t *testing.T) {
 	cases := map[string]string{
-		"hashed identity":   Join(benchPlain(MaxComponentBytes + 1)),
-		"long prefixed key": hashedPrefix + strings.Repeat("0", 100<<10),
+		"no prefix":        "streams:u-42:1234:3:5",
+		"prefix only":      hashedPrefix,
+		"digest too short": hashedPrefix + strings.Repeat("0", hashedHexLen-1),
+		"digest too long":  hashedPrefix + strings.Repeat("0", hashedHexLen+1),
+		"valid digest":     Join(benchPlain(MaxComponentBytes + 1)),
+		"non-hex digest":   hashedPrefix + strings.Repeat("z", hashedHexLen),
+		"uppercase digest": hashedPrefix + strings.Repeat("A", hashedHexLen),
 	}
 	for name, key := range cases {
 		t.Run(name, func(t *testing.T) {
-			if _, err := Split(key); !errors.Is(err, ErrHashed) {
-				t.Fatalf("Split(%.16q..., %d bytes) error = %v, want ErrHashed", key, len(key), err)
+			if got := testing.AllocsPerRun(100, func() {
+				_ = IsHashed(key)
+			}); got != 0 {
+				t.Errorf("IsHashed(%.16q, %d bytes) allocated %v times per run, want 0",
+					key, len(key), got)
+			}
+		})
+	}
+}
+
+// TestSplitRefusesHashedPrefixWithoutAllocating pins Split's refusal of a
+// "sha256:"-prefixed key. Join emits no raw key with that prefix, so such a key
+// is either a hashed identity (a valid lowercase digest, ErrHashed) or a
+// near-miss that never came from Join (ErrMalformed). Either refusal is
+// allocation-free: the digest check is a byte scan over at most hashedHexLen
+// characters, and a wrong-length digest is rejected in O(1) before the scan, so
+// an attacker cannot make a refusal expensive by sending a longer key.
+//
+// A key refused for a dangling escape is a different path and gets no such
+// assertion: Split is one forward pass, so that malformation is only found
+// after the whole key is decoded. BenchmarkSplitRefusal charts both.
+func TestSplitRefusesHashedPrefixWithoutAllocating(t *testing.T) {
+	cases := map[string]struct {
+		key     string
+		wantErr error
+	}{
+		"hashed identity":        {Join(benchPlain(MaxComponentBytes + 1)), ErrHashed},
+		"long non-digest prefix": {hashedPrefix + strings.Repeat("0", 100<<10), ErrMalformed},
+		"uppercase digest":       {hashedPrefix + strings.Repeat("A", hashedHexLen), ErrMalformed},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			if _, err := Split(c.key); !errors.Is(err, c.wantErr) {
+				t.Fatalf("Split(%.16q..., %d bytes) error = %v, want %v", c.key, len(c.key), err, c.wantErr)
 			}
 			if got := testing.AllocsPerRun(100, func() {
-				_, _ = Split(key)
+				_, _ = Split(c.key)
 			}); got != 0 {
-				t.Errorf("Split(%.16q..., %d bytes) allocated %v times per run, want 0: an attacker must not be able to make a refusal expensive by sending a longer key",
-					key, len(key), got)
+				t.Errorf("Split(%.16q..., %d bytes) allocated %v times per run, want 0: a refusal must stay allocation-free whatever the key length",
+					c.key, len(c.key), got)
 			}
 		})
 	}
@@ -578,17 +551,20 @@ func BenchmarkSplit(b *testing.B) {
 
 // BenchmarkSplitRefusal charts what a key that will never parse costs, which is
 // the number that matters when the keys arrive from a persisted file, a URL
-// segment or client storage. The hashed refusal is decided by a prefix test
-// before anything is scanned, so it is O(1) in the key length and
-// allocation-free (pinned by TestSplitRefusesAHashedKeyWithoutAllocating).
+// segment or client storage. A "sha256:"-prefixed refusal is decided by a byte
+// scan over the digest (at most hashedHexLen characters) and allocates nothing,
+// and a wrong-length digest is rejected in O(1) before the scan, so this cost
+// does not grow with the key length (allocation-free refusal pinned by
+// TestSplitRefusesHashedPrefixWithoutAllocating).
 //
 // The other refusal is deliberately not a series here. Split is one forward
 // pass, so a dangling escape at the end of an otherwise valid key is only
 // discovered after the whole key has been decoded, and it measures within a few
 // percent of a successful decode of that same key - a second series that would
 // track BenchmarkSplit forever without adding a fact. What it costs is
-// therefore already charted; that its cost scales with the key while the hashed
-// refusal's does not is the asymmetry to keep in mind when reading these two.
+// therefore already charted; that its cost scales with the key while the
+// prefixed refusal's does not is the asymmetry to keep in mind when reading
+// these two.
 func BenchmarkSplitRefusal(b *testing.B) {
 	cases := []struct {
 		name string
@@ -617,9 +593,8 @@ func BenchmarkSplitRefusal(b *testing.B) {
 
 // BenchmarkIsHashed charts the predicate the README tells a parsing call site to
 // run on every key, so its cost multiplies by that site's key rate. The two
-// cases are the two paths, and they differ by an allocation: raw is answered by
-// the prefix test and allocates nothing, hashed reaches the hex decode and
-// allocates the buffer it discards (both pinned by TestIsHashedAllocations).
+// cases are the two paths: raw is answered by the prefix test and hashed scans
+// the digest, and both allocate nothing (pinned by TestIsHashedAllocations).
 //
 // Neither case gets b.SetBytes. A hashed key is always 71 bytes and the raw one
 // is answered without reading past the prefix, so there is no meaningful byte

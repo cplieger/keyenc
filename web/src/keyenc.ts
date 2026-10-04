@@ -157,7 +157,9 @@ export function join(...parts: string[]): string {
  * exactly `join`'s image: an escape before anything other than a reserved
  * character, or a trailing dangling escape, throws {@link MalformedKeyError}
  * rather than being normalized, so "split accepted it" is a statement about the
- * key's provenance. A hashed identity throws {@link HashedKeyError}.
+ * key's provenance. A hashed identity throws {@link HashedKeyError}; any other
+ * `sha256:`-prefixed key throws {@link MalformedKeyError}, since join emits no
+ * raw key with that prefix.
  *
  * The empty key splits to no components, mirroring `join()`.
  */
@@ -166,7 +168,10 @@ export function split(key: string): string[] {
     return [];
   }
   if (key.startsWith(HASHED_PREFIX)) {
-    throw new HashedKeyError();
+    if (isHashedDigest(key.slice(HASHED_PREFIX.length))) {
+      throw new HashedKeyError();
+    }
+    throw new MalformedKeyError();
   }
   const parts: string[] = [];
   let cur = "";
@@ -202,9 +207,14 @@ export function split(key: string): string[] {
  * {@link split} at a site that must parse its keys back.
  */
 export function isHashed(key: string): boolean {
-  if (!key.startsWith(HASHED_PREFIX)) {
-    return false;
-  }
-  const rest = key.slice(HASHED_PREFIX.length);
+  return key.startsWith(HASHED_PREFIX) && isHashedDigest(key.slice(HASHED_PREFIX.length));
+}
+
+/**
+ * Whether `rest` is a digest {@link hashParts} could have emitted: exactly
+ * HASHED_HEX_LEN lowercase hex characters. join emits lowercase hex, so an
+ * uppercase digest never came from join.
+ */
+function isHashedDigest(rest: string): boolean {
   return rest.length === HASHED_HEX_LEN && /^[0-9a-f]+$/.test(rest);
 }

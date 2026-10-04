@@ -184,6 +184,21 @@ func TestSplitErrors(t *testing.T) {
 			t.Errorf(`Split("a\\") error = %v, want ErrMalformed`, err)
 		}
 	})
+	t.Run("uppercase sha256 digest is malformed", func(t *testing.T) {
+		// Join hashes any set whose escaped join would start with the prefix, so
+		// an uppercase digest is in neither its hashed image (lowercase only) nor
+		// its raw image, and matches IsHashed, which also rejects it.
+		key := hashedPrefix + strings.Repeat("A", hashedHexLen)
+		if _, err := Split(key); !errors.Is(err, ErrMalformed) {
+			t.Errorf("Split(%q) error = %v, want ErrMalformed", key, err)
+		}
+	})
+	t.Run("wrong-length sha256 digest is malformed", func(t *testing.T) {
+		key := hashedPrefix + strings.Repeat("0", hashedHexLen-1)
+		if _, err := Split(key); !errors.Is(err, ErrMalformed) {
+			t.Errorf("Split(%q) error = %v, want ErrMalformed", key, err)
+		}
+	})
 	t.Run("empty splits to nothing", func(t *testing.T) {
 		got, err := Split("")
 		if err != nil || got != nil {
@@ -202,6 +217,7 @@ func TestIsHashedIsPrecise(t *testing.T) {
 		hashedPrefix + strings.Repeat("0", hashedHexLen-1): false,
 		hashedPrefix + strings.Repeat("0", hashedHexLen+1): false,
 		hashedPrefix + strings.Repeat("g", hashedHexLen):   false,
+		hashedPrefix + strings.Repeat("A", hashedHexLen):   false,
 		"sha256": false,
 		"":       false,
 		`sha256\:` + strings.Repeat("0", hashedHexLen): false,
