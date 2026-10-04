@@ -2,47 +2,45 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/cplieger/keyenc.svg)](https://pkg.go.dev/github.com/cplieger/keyenc) [![npm](https://img.shields.io/npm/v/@cplieger/keyenc)](https://www.npmjs.com/package/@cplieger/keyenc) [![JSR](https://jsr.io/badges/@cplieger/keyenc)](https://jsr.io/@cplieger/keyenc) [![Mutation](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation.json)](https://github.com/cplieger/keyenc/issues?q=label%3Agremlins-tracker) [![Mutation (TS)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation-ts.json)](https://github.com/cplieger/keyenc/issues?q=label%3Astryker-tracker)
 
-> Join several untrusted strings into one key that no field's content can forge. Go and TypeScript, byte-identical.
+keyenc joins untrusted strings into one cache, dedupe or map key with no separator collisions, and builds the same key byte for byte in Go and TypeScript.
 
-Programs build composite keys constantly: a cache key from a path and a version, a dedupe token from a user and a stream, a map key from a kind and a host. The usual way is to concatenate with a separator, and that is correct only while no field can contain the separator.
+It replaces keys like `kind + ":" + host`, where `"a:b"` and `"c"` give the same key as `"a"` and `"b:c"`. The Go module uses only the standard library and needs Go 1.27 or later. The npm and JSR package has no runtime dependencies and ships its TypeScript source as an ES module, which your own build compiles. Both are licensed under Apache-2.0.
 
-```go
-key := kind + ":" + host          // "gitea" + "git.example.com:3000"
-```
+## Why use it
 
-When a field can contain it, two different field tuples produce the same key, and every consumer of that key silently merges two things it was built to keep apart. There is no error path: the cache returns the wrong entry, the dedupe token suppresses a distinct event as already seen, the map treats two identities as one. `keyenc` makes the separator between fields always distinguishable from a separator inside one, so distinct tuples always produce distinct keys.
+keyenc is built for keys made from fields you do not control, such as host names, paths or upstream text. A separator no field contains today can stop being safe once someone adds a field or widens its source.
 
-```go
-keyenc.Join("gitea", "git.example.com:3000")   // gitea:git.example.com\:3000
-keyenc.Join("a:b", "c") == keyenc.Join("a", "b:c")   // false
-```
+- `:` and `\` are escaped inside each field, so `Join("a:b", "c")` and `Join("a", "b:c")` differ.
+- A field with neither character is copied unchanged, so today's safe keys keep their bytes, apart from a key of one empty field.
+- `Split` gives back the exact fields `Join` encoded and refuses an escape `Join` never writes.
+- Above 8 KiB of fields, `Join` returns a 71-character SHA-256 digest, so untrusted input cannot grow a key without limit.
 
-Standard library only, zero dependencies, on both sides.
-
-## Why not just pick a separator no field can contain
-
-That is the usual answer, and it is a bet on the whole program rather than on the key. Whether a given site is safe depends on the alphabet of every field except the last, which is not visible at the call site and not stable over time. Adding a field, reordering two, or widening one field's source from an enum to free-form upstream text each turns a correct key into a forgeable one, and none of those edits looks like it touches key encoding. `\x00` narrows the bet without closing it, and it costs you a key you can put in a URL or read in a log.
+Consider [`encoding/json`](https://pkg.go.dev/encoding/json) if any JSON parser must read your keys back, since it writes RFC 7159 JSON. Consider [`crypto/hmac`](https://pkg.go.dev/crypto/hmac) if a key must also prove who made it, which an HMAC does with a secret key.
 
 ## Install
 
-- Go: `go get github.com/cplieger/keyenc@latest`
-- TS: `npx jsr add @cplieger/keyenc` or `npm i @cplieger/keyenc`
+```sh
+go get github.com/cplieger/keyenc@latest
+npx jsr add @cplieger/keyenc  # or: npm install @cplieger/keyenc
+```
 
 ## Usage
 
 ### Building a key
 
 ```go
-key := keyenc.Join("streams", userID, ratingKey, audioID, subID)
+key := keyenc.Join("gitea", "git.example.com:3000") // gitea:git.example.com\:3000
 ```
 
 ```ts
+import { join } from "@cplieger/keyenc";
+
 const key = join("streams", userID, ratingKey, audioID, subID);
 ```
 
 ### Reading one back
 
-Some keys are parsed again: a URL path segment, a value read out of a persisted file. `Split` is `Join`'s exact inverse, so the site needs one grammar rather than an encoder plus a parser that can disagree with it.
+Use `Split` where a key is parsed again, such as a URL path segment or a value read from a file. `Split` recovers every ordinary key `Join` writes and rejects an invalid escape. It also parses a hand-built key over the 8 KiB limit, which `Join` would have hashed.
 
 ```go
 parts, err := keyenc.Split(key)
@@ -52,24 +50,18 @@ if err != nil {
 kind, host := parts[0], parts[1]
 ```
 
-`Split` accepts exactly what `Join` emits. A key that could not have been produced by `Join` is refused rather than normalized, so "`Split` accepted it" is a statement about where the key came from.
-
 ### Nesting
 
-A key with an inner list nests by composition. Encode the inner sequence, then pass its result as one outer component:
+To put a list inside a key, join the inner list first and pass the result as one field. The outer `Join` escapes it again, so inner separators never read as outer ones at any depth.
 
 ```go
 languages := keyenc.Join("en", "fr")
 key := keyenc.Join(mediaType, mediaID, languages, videoPath)
 ```
 
-The inner result is escaped as it becomes an outer component, so its separators cannot be read as outer ones at any depth. A second reserved character buys the same thing for exactly two levels and fails at three.
-
 ### Oversized keys
 
-A caller that folds unbounded upstream data into a key can be made to allocate without limit. Above `MaxComponentBytes` (8 KiB of total raw input) `Join` returns a fixed-size SHA-256 identity instead. Components are streamed into the hash under a length prefix, so element boundaries survive hashing exactly as escaping preserves them below the bound.
-
-Hashing is one-way. At a site that parses its keys back, check first:
+When the fields add up to more than `MaxComponentBytes` (8 KiB), `Join` returns `sha256:` and 64 hex digits instead. Field boundaries still count, so `["a", "b"]` and `["ab"]` give different digests. An ordinary key never starts with `sha256:`, because `Join` hashes any field list whose key would. `IsHashed` therefore tells the two apart. A digest is one-way, so check it before `Split`:
 
 ```go
 if keyenc.IsHashed(key) {
@@ -77,48 +69,45 @@ if keyenc.IsHashed(key) {
 }
 ```
 
-## Adopting this in an existing key
-
-A component containing neither reserved character is emitted verbatim, so a key whose fields are already separator-free encodes **byte-identically** to its naive concatenation:
-
-```go
-keyenc.Join("streams", "u-42", "1234", "3", "5")   // streams:u-42:1234:3:5
-```
-
-The bytes change only where the naive form was already ambiguous. So adopting `keyenc` at a key that is currently safe costs nothing: no re-key, no cache invalidation, and no migration for a persisted key. At a key that is currently forgeable the bytes do change for the inputs that were colliding, which is the point.
-
 ## API
 
-| Symbol | Purpose |
-| --- | --- |
-| `Join(parts ...string) string` | Encode components as one key. Hashes above `MaxComponentBytes`. |
-| `Split(key string) ([]string, error)` | Recover the exact components. `Join`'s inverse. |
-| `IsHashed(key string) bool` | Whether the key is a hashed identity, whose components are gone. |
-| `MaxComponentBytes` | Total raw size, in bytes, above which `Join` hashes. |
-| `Separator`, `Escape` | The two reserved characters, `:` and `\`. |
-| `ErrHashed`, `ErrMalformed` | Why `Split` refused. |
+- `Join`, `Split` and `IsHashed` build a key, read it back and tell a digest from an ordinary key.
+- `MaxComponentBytes` is the total input size, in bytes, above which `Join` returns a digest.
+- `Separator` and `Escape` are the two reserved characters, `:` and `\`.
+- `ErrHashed` and `ErrMalformed` say why `Split` refused a key.
 
-The TypeScript half exports the same surface as `join`, `split`, `isHashed`, `MAX_COMPONENT_BYTES`, `SEPARATOR`, `ESCAPE`, `HashedKeyError` and `MalformedKeyError`.
+The TypeScript package exports the same surface as `join`, `split`, `isHashed`, `MAX_COMPONENT_BYTES`, `SEPARATOR`, `ESCAPE`, `HashedKeyError` and `MalformedKeyError`, and its `split` throws those errors. The full reference is on [pkg.go.dev](https://pkg.go.dev/github.com/cplieger/keyenc) and [JSR](https://jsr.io/@cplieger/keyenc/doc).
 
-## Cross-language parity
+## Existing safe keys keep their bytes
 
-The two implementations produce identical keys for identical input, which matters wherever a key built in one language is looked up against keys built in the other. The parity is pinned by a shared golden fixture rather than by inspection: `conformance/keys.json` is generated from the Go implementation and asserted by the TypeScript test suite.
+A field with neither `:` nor `\` is copied unchanged, so a key whose fields are already separator-free is byte-identical to its plain concatenation:
 
-Two details carry that parity and are easy to get wrong in a reimplementation. The size bound is measured in **UTF-8 bytes**, not UTF-16 code units, so a key with multibyte text crosses the threshold at the same point in both languages. And the digest hashes UTF-8 bytes with an 8-byte big-endian length prefix per component. The fixture contains a case that fails specifically when either is wrong.
-
-To change the grammar, regenerate and land both halves in one commit:
-
-```sh
-UPDATE_GOLDEN=1 go test ./... -run TestConformanceFixture
-cd web && npm test
+```go
+keyenc.Join("streams", "u-42", "1234", "3", "5") // streams:u-42:1234:3:5
 ```
 
-## Unsupported by Design
+The bytes change only where the plain form was already ambiguous. A key of one empty field is the one case. `Join` hashes it, because its plain form is the same empty string as a key of no fields. Adopting keyenc at a key that is safe today needs no re-key, no cache flush and no migration of a stored key. At a key that collides today, keyenc gives the colliding field lists different encodings.
 
-- **No configurable separator.** Two implementations that must agree byte-for-byte cannot each carry a policy knob, and a key encoded under one separator is unreadable under another. Nesting covers what a second separator would have.
-- **No key derivation, no MAC, no authentication.** The digest bounds a key's size. It is not a commitment, not constant-time, and not a substitute for HMAC. A key from this package tells you two field tuples differ; it tells you nothing about who produced them.
-- **No canonicalization of components.** `Join` encodes what it is given. Case folding, Unicode normalization and trimming are the caller's decisions, and applying them here would make two implementations of "normalize" the thing that has to stay in sync.
-- **Arbitrary bytes are Go-only.** A Go string is a byte sequence and a JavaScript string is a UTF-16 sequence, so the two halves agree for all valid UTF-8 and the conformance fixture covers only that. Go's own fuzz targets cover invalid UTF-8 for the Go implementation.
+## Go and TypeScript build the same keys
+
+Both halves give identical keys for identical input, so a key built in one language can be looked up among keys built in the other. A shared fixture, `conformance/keys.json`, is generated from the Go half and checked by the TypeScript tests. Both count the size limit in UTF-8 bytes, so a key with multibyte text switches to a digest at the same point in each language. The TypeScript half computes SHA-256 in its own code, with no Web Crypto or `node:crypto`, so `join` stays synchronous. [How keyenc encodes a key](docs/how-it-works.md#go-and-typescript-agree) lists the details a reimplementation must match.
+
+## Unsupported by design
+
+- No configurable separator. Two implementations that must agree byte for byte cannot each carry a setting, and a key written with one separator cannot be read with another. Nesting covers what a second separator would.
+- No key derivation, message authentication or proof of origin. The digest only bounds a key's size, and it is no substitute for an HMAC. A key tells you two field lists differ, and nothing about who built them.
+- No cleanup of fields. `Join` encodes what it is given. Case folding, Unicode normalization and trimming are the caller's choice.
+- Arbitrary bytes are Go-only. A Go string is a byte sequence and a JavaScript string is UTF-16, so the two halves agree for valid UTF-8, which is all the shared fixture covers. Go's fuzz tests cover invalid UTF-8 in Go.
+
+The reasons for each are in [How keyenc encodes a key](docs/how-it-works.md#non-goals).
+
+## Documentation
+
+- [How keyenc encodes a key](docs/how-it-works.md) gives the full format and the reasons behind each limit, for anyone reimplementing it or reading a key by hand.
+
+## Contributing
+
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how the Go and TypeScript halves are kept in step.
 
 ## Disclaimer
 
