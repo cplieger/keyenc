@@ -107,7 +107,7 @@ The reasons for each are in [How keyenc encodes a key](docs/how-it-works.md#non-
 
 ## Contributing
 
-Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how the Go and TypeScript halves are kept in step.
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Disclaimer
 
