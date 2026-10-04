@@ -44,11 +44,11 @@ if (isHashed(key)) return;
 
 A component containing neither reserved character (`:` and `\`) is emitted verbatim, so a key whose fields are already separator-free encodes byte-identically to its template literal. Adopting this at a key that is currently safe therefore changes nothing, including for a key persisted in `localStorage`.
 
-`split` accepts exactly what `join` emits. A key that could not have been produced by `join` throws `MalformedKeyError` rather than being normalized, and a digest throws `HashedKeyError`.
+Calling `split` on a key `join` returned recovers the original parts, as long as `join` did not hash that set. A malformed escape, a backslash before an ordinary character or a trailing backslash, throws `MalformedKeyError` rather than being normalized. A digest, `sha256:` followed by 64 lowercase hex characters, throws `HashedKeyError`, because a hashed identity keeps no components to recover. Any other `sha256:`-prefixed key throws `MalformedKeyError`, because `join` never writes one. `split` does not check the size bound, so a key larger than `join` would hash still splits to its fields.
 
 ## Full documentation
 
-The grammar, the nesting rule, the size bound, the cross-language parity contract and the API table are in the [repository README](https://github.com/cplieger/keyenc#readme).
+The grammar, the nesting rule and the size bound are in [How keyenc encodes a key](https://github.com/cplieger/keyenc/blob/main/docs/how-it-works.md). The cross-language parity contract and the API table are in the [repository README](https://github.com/cplieger/keyenc#readme).
 
 ## Disclaimer
 
