@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
   "lastUpdate": 1791931014785,
-  "repoUrl": "https://github.com/cplieger/ci",
+  "repoUrl": "https://github.com/cplieger/keyenc",
   "entries": {
     "Benchmark": [
       {
@@ -2879,10 +2879,10 @@ window.BENCHMARK_DATA = {
             "username": "web-flow",
             "email": "noreply@github.com"
           },
-          "id": "c0fd11f07f039f4aba63c4e461884a9f652b5193",
-          "message": "chore(deps): update module golang.org/x/exp to v0.0.0-20261013213113-2ab7f3cbc5fb (#810)\n\nCo-authored-by: tribble-trouble[bot] <338123824+tribble-trouble[bot]@users.noreply.github.com>",
-          "timestamp": "2026-10-13T22:10:39Z",
-          "url": "https://github.com/cplieger/ci/commit/c0fd11f07f039f4aba63c4e461884a9f652b5193"
+          "id": "c97b7613dd10dbde098dcc99751b886426f6e4cf",
+          "message": "chore(devdeps): update dependency prettier to v3.9.10 (#293)\n\nchore(devdeps): update dependency prettier to v3.9.10\n\nCo-authored-by: tribble-trouble[bot] <338123824+tribble-trouble[bot]@users.noreply.github.com>",
+          "timestamp": "2026-10-13T09:13:06Z",
+          "url": "https://github.com/cplieger/keyenc/commit/c97b7613dd10dbde098dcc99751b886426f6e4cf"
         },
         "date": 1791931014517,
         "tool": "customSmallerIsBetter",
