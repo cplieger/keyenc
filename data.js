@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
   "lastUpdate": 1793140402292,
-  "repoUrl": "https://github.com/cplieger/ci",
+  "repoUrl": "https://github.com/cplieger/keyenc",
   "entries": {
     "Benchmark": [
       {
@@ -3595,10 +3595,10 @@ window.BENCHMARK_DATA = {
             "username": "web-flow",
             "email": "noreply@github.com"
           },
-          "id": "a4adc2450f849e94a70171386398350c33f7b66f",
-          "message": "chore(deps): update cplieger/ci digest to a00f6a5 (#890)\n\nCo-authored-by: tribble-trouble[bot] <338123824+tribble-trouble[bot]@users.noreply.github.com>",
-          "timestamp": "2026-10-27T02:08:25Z",
-          "url": "https://github.com/cplieger/ci/commit/a4adc2450f849e94a70171386398350c33f7b66f"
+          "id": "e2c6610bd9f3395b8ec8a2cd139d6ae348b3a358",
+          "message": "chore(devdeps): update dependency knip to v6.43.0 (#383)\n\nchore(devdeps): update dependency knip to v6.43.0\n\nCo-authored-by: tribble-trouble[bot] <338123824+tribble-trouble[bot]@users.noreply.github.com>",
+          "timestamp": "2026-10-27T09:13:14Z",
+          "url": "https://github.com/cplieger/keyenc/commit/e2c6610bd9f3395b8ec8a2cd139d6ae348b3a358"
         },
         "date": 1793140401905,
         "tool": "customSmallerIsBetter",
