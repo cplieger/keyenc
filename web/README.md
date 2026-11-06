@@ -1,5 +1,8 @@
 # @cplieger/keyenc
 
+> Moved to [`github.com/cplieger/go/keyenc`](https://github.com/cplieger/go/tree/dev/keyenc), which also publishes `@cplieger/keyenc` from `keyenc/web`.
+> **Archived 2026-11-06. This repository is read-only. The published Go module and npm package stay available.**
+>
 > Join several untrusted strings into one key that no field's content can forge.
 
 The TypeScript half of [cplieger/keyenc](https://github.com/cplieger/keyenc). It produces byte-identical keys to the Go half, so a key built here can be looked up against keys built there.
