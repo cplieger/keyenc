@@ -1,5 +1,8 @@
 # keyenc
 
+> Moved to [`github.com/cplieger/go/keyenc`](https://github.com/cplieger/go/tree/dev/keyenc), which also publishes `@cplieger/keyenc` from `keyenc/web`.
+> **Archived 2026-11-06. This repository is read-only. The published Go module and npm package stay available.**
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/cplieger/keyenc.svg)](https://pkg.go.dev/github.com/cplieger/keyenc) [![npm](https://img.shields.io/npm/v/@cplieger/keyenc)](https://www.npmjs.com/package/@cplieger/keyenc) [![JSR](https://jsr.io/badges/@cplieger/keyenc)](https://jsr.io/@cplieger/keyenc) [![Mutation](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation.json)](https://github.com/cplieger/keyenc/issues?q=label%3Agremlins-tracker) [![Mutation (TS)](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cplieger/keyenc/badges/mutation-ts.json)](https://github.com/cplieger/keyenc/issues?q=label%3Astryker-tracker)
 
 keyenc joins untrusted strings into one cache, dedupe or map key with no separator collisions, and builds the same key byte for byte in Go and TypeScript.
